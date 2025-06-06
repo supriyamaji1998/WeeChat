@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 const otpSchema = new mongoose.Schema({
   email: String,
   otp: String,
+  isVerfied: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now,
