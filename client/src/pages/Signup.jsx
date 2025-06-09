@@ -120,10 +120,9 @@ export default function Signup() {
         display: "flex",
         alignItems: "center",
         justifyContent: "flex-start",
-        background:
-          "linear-gradient(135deg, #232526 0%, #414345 40%, #232526 100%)",
         padding: "0 5vw",
       }}
+      className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500"
     >
       {showOtpInput && (
         <div

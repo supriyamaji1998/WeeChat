@@ -107,6 +107,99 @@ const verifyEmail = async (req, res) => {
     }  
 }
 
+const forgetPassword = async (req, res) => {
+    const { email } = req.body;   
+    try {
+        if ( !email) {
+            return res.status(400).json({ message: 'Email is required...' });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ message: 'User is not regaistered with this email.' });
+
+        // return res.status(200).json({ message: 'User is already registered with this email.',user});
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+            user: "majisupriya198@gmail.com",
+            pass: "rywc sxck nsvo yygd",
+            },
+        });
+
+        const mailOptions = {
+            from: "majisupriya198@gmail.com",
+            to: email,
+            subject: "Your OTP for reset password",
+            html: `<p>Hello ${user.name},</p>
+                   <p>Your OTP for reset password is: <strong>${otp}</strong></p>
+                   <p>Please use this OTP to reset your password.</p>
+                   <p>Thank you!</p>`
+        };
+
+        await transporter.sendMail(mailOptions, (error, info) => {
+             if (error) {
+                    return console.log('Error:', error);
+                }
+                 console.log('Email sent:', info.response);
+        });
+        const salt= await bcrypt.genSalt(10)
+        const hashedotp = await bcrypt.hash(otp,salt)
+        const newOtpRecord = new EmailVerification({
+            email,
+            otp:hashedotp
+        })
+
+        if(newOtpRecord) {
+            await newOtpRecord.save()
+            res.status(201).json({
+                message: 'OTP sent to your email. Please verify to reset password...',
+                otp: newOtpRecord.otp,
+                email: newOtpRecord.email
+            })
+        }else{
+         res.status(400).json({message:'Unable to send OTP, please try again later'});
+        }
+
+    }catch (error) {
+        console.error("Error in verify email controller", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }  
+}
+
+const reSetNewPass = async (req, res) => {
+    const { email , newPassword } = req.body;
+    console.log("Reset Password Request:", req.body);
+    try {
+        if (!email || !newPassword) {
+            return res.status(400).json({ message: 'All values are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }           
+        const user = await User.find({ email });
+        if (!user) return res.status(400).json({ message: 'User is not registered with this email.' });   
+        
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);    
+        const updatedUser = await User.findOneAndUpdate(
+            { email },
+            { password: hashedPassword },
+            { new: true }
+        );
+        if (!updatedUser) {
+            return res.status(400).json({ message: 'Unable to reset password, please try again later.' });
+        }   
+        return res.status(200).json(updatedUser)    
+    } catch (error) {
+        console.error("Error in reSetNewPass controller", error.message);
+        return res.status(500).json({ message: "Internal server error" });
+    }           
+}
+
+
 const login = async (req,res)=> {
     const {email,password}=req.body;
     try{
@@ -186,4 +279,4 @@ const checkAuth= (req,res)=> {
 
 }
 
-export {signup , login ,logout,updateProfile, checkAuth, verifyEmail};
+export {signup , login ,logout,updateProfile, checkAuth, verifyEmail,forgetPassword,reSetNewPass};
