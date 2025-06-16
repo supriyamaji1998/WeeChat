@@ -8,7 +8,7 @@ const router = express.Router()
 
 router.get("/users",protectProfile,getUserFromIcon);
 router.get("/:id",protectProfile,getMessages)
-router.post("/sendMessage/:id",protectProfile,sendMessages)
+router.post("/send/:id",protectProfile,sendMessages)
 
 export default router;
 

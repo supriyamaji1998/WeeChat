@@ -1,9 +1,10 @@
 import User from "../models/user.model.js";
 import EmailVerification from "../models/email.verification.model.js";
 import generateToken from "../lib/utils.js";
-
+import cloudinary from "../lib/cloudnary.js";
 import bcrypt from "bcryptjs"
 import nodemailer from "nodemailer";
+import sharp from "sharp";
 const signup = async (req,res)=> {
     const {name,email,password}=req.body;
     try{
@@ -245,14 +246,40 @@ const logout= (req,res)=> {
 
 const updateProfile= async(req,res)=> {
     try{
-        const {profilePic}=req.body;
+        const {profilePic}=req.body.authUser;
+        console.log("Update Profile Request:", profilePic);
         const userId= req.user._id;
 
         if(!profilePic){
             return res.status(401).json({message:'ProfilePic is required'});
         }
 
-        const uploadPfPic = await cloudinary.uploader.upload(profilePic)
+        // Decode base64 image
+        const matches = profilePic.match(/^data:(.+);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({ message: "Invalid image format" });
+        }
+        const buffer = Buffer.from(matches[2], "base64");
+
+        // Compress image to ~300KB
+        let compressedBuffer = await sharp(buffer)
+            .jpeg({ quality: 70 }) // adjust quality as needed
+            .toBuffer();
+
+        // If still larger than 300KB, reduce quality further
+        let quality = 70;
+        while (compressedBuffer.length > 150 * 480 && quality > 30) {
+            quality -= 10;
+            compressedBuffer = await sharp(buffer)
+            .jpeg({ quality })
+            .toBuffer();
+        }
+
+        // Convert back to base64 for cloudinary upload
+        const compressedBase64 = `data:image/jpeg;base64,${compressedBuffer.toString("base64")}`;
+
+
+        const uploadPfPic = await cloudinary.uploader.upload(compressedBase64)
         const updateUser= await User.findByIdAndUpdate(userId,
             {
                 profilePic:uploadPfPic.secure_url
